@@ -1,0 +1,490 @@
+# -*- coding: utf-8 -*-
+import servos, time, math
+import RPi.GPIO as GPIO
+import Adafruit_PCA9685
+import struct
+
+import sys
+from Tkinter import *
+GPIO.setwarnings(False)
+GPIO.setmode (GPIO.BOARD) 
+#inicializar puertos y PCA9685
+pwm = Adafruit_PCA9685.PCA9685()
+#motor pins
+Enable1=36
+Enable2=38
+GPIO.setup(Enable1,GPIO.OUT)
+GPIO.setup(Enable2,GPIO.OUT)
+pwmMax=4095
+pwm.set_pwm_freq (60)
+pwm.set_pwm(0,0,pwmMax) 
+global speed
+speed=40
+global vmax
+vmax = 70
+
+#Cambiar al probar
+#Ultrasonic sensor (definir aqui los pines de entrada y salida de US)
+RCT=40
+RCE=37
+LEDROJO=35
+##LCT=
+##LCE=
+##LST=
+##LSE=
+L1=1
+L2=1
+L3=1
+L4=1
+
+servos.init()
+GPIO.setup(RCT,GPIO.OUT)
+GPIO.setup(RCE,GPIO.IN)
+GPIO.setup(LEDROJO,GPIO.OUT)
+GPIO.setup(12, GPIO.OUT)
+p = GPIO.PWM(12, 20)
+p.start(0)
+
+GPIO.setup(11, GPIO.OUT)
+q = GPIO.PWM(11, 20)
+q.start(0)
+
+GPIO.setup(15, GPIO.OUT)
+a = GPIO.PWM(15, 20)
+a.start(0)
+
+GPIO.setup(13, GPIO.OUT)
+b = GPIO.PWM(13, 20)
+b.start(0)
+def getDistanceRight():
+    GPIO.output (RCT,True)
+    time.sleep (0.00001)
+    GPIO.output (RCT, False)
+    start= time.time()
+    while GPIO.input (RCE) == 0:
+        start =time.time()
+    while GPIO.input (RCE) == 1:
+        stop =time.time()
+    t_trans= stop-start
+    distancia = (t_trans*34300)/2
+    time.sleep(1)
+    return distancia
+
+
+def automatico():
+#   fordward()
+#   continua=1
+#   while(continua):
+#         distance=getDistanceRight()
+#   	 if distance<30:
+#		GPIO.output(LEDROJO,True)
+#		stop()
+#time.sleep(0.3)
+	SpinRight()
+	time.sleep(2)
+#		continua=0
+#		GPIO.output(LEDROJO,False)
+def stop():
+    global speed
+    GPIO.output(Enable1,True)
+    GPIO.output(Enable2,True)
+    p.ChangeDutyCycle(0)
+    q.ChangeDutyCycle(0)
+    a.ChangeDutyCycle(0)
+    b.ChangeDutyCycle(0)
+    p.ChangeFrequency(speed + 5)
+    a.ChangeFrequency(speed + 5)
+def backwards():
+    global speed
+    GPIO.output(Enable1,True)
+    GPIO.output(Enable2,True)
+    p.ChangeDutyCycle(speed)
+    q.ChangeDutyCycle(0)
+    a.ChangeDutyCycle(speed)
+    b.ChangeDutyCycle(0)
+    p.ChangeFrequency(speed + 5)
+    a.ChangeFrequency(speed + 5)
+    #file = open( "/dev/input/mouse1", "rb" );
+    #X=0
+    #Y=0
+    #i=0
+    #final=time.time()
+    #while (i<50):
+		#i=i+1
+		#buf = file.read(3)
+		#dx,dy=struct.unpack( "bb" ,buf[1:] )
+		#transcurrido=time.time()-final
+		#final=time.time()
+		#if transcurrido < 0.6:
+			#X=X+(dx*transcurrido)
+			#Y=Y+(dy*transcurrido)
+		#print Y
+    
+
+
+def fordward():
+    global speed
+    GPIO.output(Enable1,True)
+    GPIO.output(Enable2,True)
+    yk=0
+    yk3=0
+    Y=0.0
+    distan=float(distancia.get())
+    conver1=0.27
+    conver2=0.2524
+    file = open( "/dev/input/mouse1", "rb" )
+    file1 = open( "/dev/input/mouse0", "rb" )
+    at=time.time()         
+    p.ChangeDutyCycle(0)
+    q.ChangeDutyCycle(speed)
+    a.ChangeDutyCycle(0)
+    b.ChangeDutyCycle(speed)
+    q.ChangeFrequency(speed + 5)
+    b.ChangeFrequency(speed + 5)
+    while (Y<distan):
+	buf=file.read(3)
+	buf1=file1.read(3)
+	dx,dy=struct.unpack("bb",buf[1:])
+	dx1,dy1=struct.unpack("bb",buf1[1:])
+	yk1=dy
+	yk2=dy1
+        #D_x(k+1) = D_x(k) + h/2 * (DATA(k+1, 2) + DATA(k,2)) 
+	yk1 = yk+(time.time()-at)*yk1
+	yk2= yk3+(time.time()-at)*yk2
+	at=time.time()
+	yk=yk1
+	yk3=yk2
+	print speed
+	Y=(yk1*conver1+yk2*conver2)/2
+        q.ChangeDutyCycle(speed)
+        b.ChangeDutyCycle(speed)
+        q.ChangeFrequency(speed + 5)
+        b.ChangeFrequency(speed + 5)
+	if Y<distan/2.0:
+             speed = speed + 1
+             if speed > vmax:
+                speed = vmax
+        if Y > distan-distan/2.0:
+             speed = speed - 1
+             if speed < 40:
+                speed = 40
+    q.ChangeDutyCycle(0)
+    b.ChangeDutyCycle(0)
+    q.ChangeFrequency(0+5)
+    b.ChangeFrequency(0+5)
+    speed=40
+                
+                    
+		
+def SpinRight():
+    global speed
+    speed=65
+    GPIO.output(Enable1,True)
+    GPIO.output(Enable2,True)
+    yk=0
+    xk=0
+    Lraton=11
+    p.ChangeDutyCycle(0)
+    q.ChangeDutyCycle(speed)
+15    a.ChangeDutyCycle(speed)
+    b.ChangeDutyCycle(0)
+    q.ChangeFrequency(speed + 5)
+    a.ChangeFrequency(speed + 5)
+    at=time.time()
+    angul=float(angulo.get())
+    calculoang=0.0
+    convery=0.27
+    converx=0.27
+    while (calculoang<angul):
+		file = open( "/dev/input/mouse1", "rb" );
+		buf = file.read(3)
+		dx,dy=struct.unpack( "bb" ,buf[1:] )
+		yk1=dy
+		xk1=dx
+                xk1= xk+(time.time()-at)*xk1
+		xk=xk1
+		yk1= yk+(time.time()-at)*yk1
+		yk=yk1
+		at=time.time()
+		Y=yk1*convery
+		X=xk1*converx
+		calpart1 = math.pi/2
+		calpart2 = math.atan2((Lraton - Y),X)
+                calculoang = (calpart1 - calpart2)*180/math.pi
+		print calculoang
+                q.ChangeDutyCycle(speed)
+                a.ChangeDutyCycle(speed)
+                q.ChangeFrequency(speed + 5)
+                a.ChangeFrequency(speed + 5)
+		if calculoang < angul/2.0:
+                    speed = speed + 1
+                    if speed >85 :
+                        speed = 85
+                if calculoang > angul-angul/2.0:
+                    speed = speed -1
+                    if speed < 65:
+                        speed = 65
+    q.ChangeDutyCycle(0)
+    a.ChangeDutyCycle(0)
+    q.ChangeFrequency(5)
+    a.ChangeFrequency(5)
+    
+def SpinLeft():
+    GPIO.output(Enable1,True)
+    GPIO.output(Enable2,True)
+    p.ChangeDutyCycle(0)
+    q.ChangeDutyCycle(speed)
+    a.ChangeDutyCycle(speed)
+    b.ChangeDutyCycle(0)
+    p.ChangeFrequency(speed + 5)
+    a.ChangeFrequency(speed + 5)
+def turnRight(angle):
+    duty = float(angle) / 10.0 + 2.5
+    high = int(duty*pwmMax)
+    low= int (pwmMax*(1-duty))
+    pwm.set_pwm(0,high,low)
+def turnLeft(angle):
+    duty = float(angle) / 10.0 + 2.5
+    high = int(1-duty)*pwmMax
+    low= int(pwmMax*duty)
+    pwm.set_pwm(0,high,low)
+def move ():
+    x=x1.get()
+    y=y1.get()
+    z=z1.get()
+    ax=ax2.get()
+    ay=ay2.get()
+    az=az2.get()
+    L4=1
+    mx=x-L4*ax
+    my=y-L4*ay
+    mz=z-L4*az
+    L1=1
+    L2=1
+    L3=1
+    
+    if (mx==0 and my==0):
+        q1=0
+    elif (mx==0 and my>0):
+	q1=math.pi/2
+    elif (mx==0 and my<0):
+	q1=-math.pi/2
+    else:
+        q1=math.atan(my/mx)
+    print q1
+    p=math.cos(q1)
+    c=math.sin(q1)
+    r=math.sqrt((mx/p)**2+(mz-L1)**2)
+    if mx==0:
+        FI=math.pi/2
+    else:    
+        FI = math.atan((mz-L1)*p/mx)
+    q2=FI-math.acos(((mx/p)**2+L2**2-L3**2+mz**2+L1**2-2*mz*L1)/(2*L2*r))
+    print q2
+    t=L2*math.cos(q2)
+    j=L2*math.sin(q2)
+    k=math.cos(q1)
+    q3=math.acos((mx/k-t)/L3)-q2
+    q3= math.atan2((mz-L1-j),(mx/p-t))-q2
+    if abs(q3)<0.1:
+        q3=0
+    print q3
+    a=math.cos(q2+q3)
+    b=math.sin(q2+q3)
+    q4=math.atan2(-(ax*b*p - az*a + ay*b*c),(az*b + ax*a*p + ay*a*c))-math.pi
+    if abs(q4)<0.1:
+        q4=0
+    print q4
+    turnRight(1,q1)
+    turnRight(2,q2)
+    turnRight(3,q3)
+    turnRight(4,q4)
+def exit():
+    GPIO.cleanup()
+    print "quit"
+
+
+#ultrasonic sensors functions  
+def getDistanceRight():
+    GPIO.output (RCT,True)
+    time.sleep (0.00001)
+    GPIO.output (RCT, False)
+    start= time.time()
+    while GPIO.input (RCE) == 0:
+        start =time.time()
+    while GPIO.input (RCE) == 1:
+        stop =time.time()
+    t_trans= stop-start
+    distancia = (t_trans*34300)/2
+    print distancia
+
+
+##def getDistanceLeft():
+##    GPIO.output (LCT,True) 
+##    time.sleep (0.00001)            
+##    GPIO.output (LCT, False) 
+##    start= time.time()                
+##    while GPIO.input (lCE) == 0: 
+##        start =time.time()             
+##    while GPIO.input (LCE) == 1: 
+##        stop =time.time()              
+##    t_trans= stop-start                
+##    distancia = (t_trans*34300)/2
+##    #print distancia
+##    time.sleep(1)
+##    return distancia
+##def getDistanceSide():
+##    GPIO.output (LST,True) 
+##    time.sleep (0.00001)            
+##    GPIO.output (LST, False) 
+##    start= time.time()                
+##    while GPIO.input (LSE) == 0: 
+##        start =time.time()             
+##    while GPIO.input (LSEE) == 1: 
+##        stop =time.time()              
+##    t_trans= stop-start                
+##    distancia = (t_trans*34300)/2
+##    #print distancia
+##    time.sleep(1)
+##    return distancia
+
+##try:
+##        move(1.299,2.25,0.5,0.433,0.75,-0.5)
+    
+    ##while (1):
+        ##forward()
+	#turnRight(45)
+##	distancia=getDistanceRight()      
+##        if distancia<30:
+##		if primera==1: 
+##		turnRight(45)
+##		time.sleep(0.1)
+##		turnLeft(0)
+##		primera=0
+##		girado=1
+##	else if distancia>30 && girado=1
+##        	primera=1
+##		girado=0
+
+
+##        DR=servos.getDistanceRight()
+##        DL=servos.getDistanceLeft()
+##        DS=servos.getDistanceSide()
+##        if DR <=10 and DL > 10
+##            obstacleRight= True
+##        if DL<=10 and DR > 10
+##            obstacleleft = True
+##        if DL <=10 and DL<=10
+##            obstacleCentre=True
+##        if obstacleRight
+##            servos.stop()
+##            servos.turnLeft()
+##            #servos.forward()
+##        if obstacleLeft
+##            servos.stop()
+##            servos.turnRight()
+##            #servos.forward()
+##        if obstacleCentre
+##            servos.stop()
+##            servos.turnRight()
+##            #servos.forward()
+##        
+##except KeyboardInterrupt:
+##    GPIO.cleanup()
+##    print "quit"
+    
+       
+
+ventana = Tk()
+ventana.geometry("656x426")
+ventana.title("interfaz brazo")
+#imagenL=PhotoImage(file="Sin.png")
+#lblimagen=Label(ventana,image=imagenL).place(x=0,y=0)
+
+#definicion de la ventana
+
+#ventana.grid(column=0, row=0, padx=(100,100), pady=(100,100))
+#ventana.columnconfigure(0,weight=1)
+#ventana.rowconfigure(0,weight=1)
+#slider
+q1 = Scale(ventana, from_=0, to=360, orient=HORIZONTAL)
+q1.place(x=91,y=225)
+
+q2 = Scale(ventana, from_=-50, to=200, orient=HORIZONTAL)
+q2.place(x=91,y=265)
+#
+q3 = Scale(ventana, from_=-50, to=200, orient=HORIZONTAL)
+q3.place(x=91,y=305)
+#
+q4 = Scale(ventana, from_=-90, to=90, orient=HORIZONTAL)
+q4.place(x=91,y=345)
+#
+
+##Cuadros para introducir valores 
+posx = ""
+x1 = Entry(ventana, width=5, textvariable=posx)
+x1.place(x=31,y=94)
+#
+posy = ""
+y1 = Entry(ventana, width=5, textvariable=posy)
+y1.place(x=71,y=94)
+#
+posz = ""
+z1 = Entry(ventana, width=5, textvariable=posz)
+z1.place(x=111,y=94)
+ax1 = ""
+ax2 = Entry(ventana, width=5, textvariable=ax1)
+ax2.place(x=157,y=93)
+#
+#
+distancia = ""
+distancia = Entry(ventana, width=5, textvariable=distancia)
+distancia.place(x=428,y=40)
+
+angulo = ""
+angulo = Entry(ventana, width=5, textvariable=angulo)
+angulo.place(x=458,y=40)
+
+ay1 = ""
+ay2 = Entry(ventana, width=5, textvariable=ay1)
+ay2.place(x=190,y=93)
+#
+#
+az1 = ""
+az2 = Entry(ventana, width=5, textvariable=az1)
+az2.place(x=225,y=93)
+#
+##Botones
+mover = Button(ventana, command=move, text="Start", width=5)
+mover.place(x=22,y=112)
+#
+
+#
+ini = Button(ventana, text="Home", width=5)
+ini.place(x=68,y=139)
+#
+##botones coche
+#
+automatico = Button(ventana, text="Traer agua", width=10)
+automatico.place(x=400,y=300)
+
+automatico1 = Button(ventana, text="Traer medicación", width=15)
+automatico1.place(x=500,y=300)
+
+avanza = Button(ventana,command=fordward, text="Avanza", width=10)
+avanza.place(x=448,y=64)
+#
+retro = Button(ventana, command=backwards, text="Retroceder", width=10)
+retro.place(x=448,y=140)
+#
+girai = Button(ventana, command=SpinLeft, text="Gira Izquierda", width=10)
+girai.place(x=368,y=98)
+#
+Stop1 = Button(ventana, command=stop, text="Stop", width=10)
+Stop1.place(x=448,y=98)
+#
+girad = Button(ventana, command=SpinRight, text="Gira Derecha ", width=10)
+girad.place(x=528,y=98)
+
+ventana.mainloop()
+

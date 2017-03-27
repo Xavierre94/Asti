@@ -1,0 +1,325 @@
+import servos, time, math
+import RPi.GPIO as GPIO
+# -*- coding: utf-8 -*-
+
+import sys
+from Tkinter import *
+GPIO.setwarnings(False)
+GPIO.setmode (GPIO.BOARD) 
+#inicializar puertos y PCA9685
+pwm = Adafruit_PCA9685.PCA9685()
+#motor pins
+GPIO.setup(36,GPIO.OUT)
+GPIO.setup(38,GPIO.OUT)
+pwmMax=4095
+pwm.set_pwm_freq (60)
+pwm.set_pwm(0,0,pwmMax) 
+speed = 90
+#Cambiar al probar
+#Ultrasonic sensor (definir aqui los pines de entrada y salida de US)
+##RCT=40
+##RCE=37
+##LCT=
+##LCE=
+##LST=
+##LSE=
+##L1=1
+##L2=1
+##L3=1
+##L4=1
+
+servos.init()
+##    GPIO.setup(RCT,GPIO.OUT)
+##    GPIO.setup(RCE,GPIO.IN)
+GPIO.setup(12, GPIO.OUT)
+p = GPIO.PWM(12, 20)
+p.start(0)
+
+GPIO.setup(11, GPIO.OUT)
+q = GPIO.PWM(11, 20)
+q.start(0)
+
+GPIO.setup(15, GPIO.OUT)
+a = GPIO.PWM(15, 20)
+a.start(0)
+
+GPIO.setup(13, GPIO.OUT)
+b = GPIO.PWM(13, 20)
+b.start(0)
+
+def forward(speed):
+    GPIO.output(36,True)
+    GPIO.output(38,True)
+    p.ChangeDutyCycle(speed)
+    q.ChangeDutyCycle(0)
+    a.ChangeDutyCycle(speed)
+    b.ChangeDutyCycle(0)
+    p.ChangeFrequency(speed + 5)
+    a.ChangeFrequency(speed + 5)
+def backwards(speed):
+    GPIO.output(36,True)
+    GPIO.output(38,True)
+    p.ChangeDutyCycle(0)
+    q.ChangeDutyCycle(speed)
+    a.ChangeDutyCycle(0)
+    b.ChangeDutyCycle(speed)
+    p.ChangeFrequency(speed + 5)
+    a.ChangeFrequency(speed + 5)
+def SpinRight(speed):
+    GPIO.output(36,True)
+    GPIO.output(38,True)
+    p.ChangeDutyCycle(speed)
+    q.ChangeDutyCycle(0)
+    a.ChangeDutyCycle(0)
+    b.ChangeDutyCycle(speed)
+    p.ChangeFrequency(speed + 5)
+    a.ChangeFrequency(speed + 5)
+def SpinLeft(speed):
+    GPIO.output(36,True)
+    GPIO.output(38,True)
+    p.ChangeDutyCycle(0)
+    q.ChangeDutyCycle(speed)
+    a.ChangeDutyCycle(speed)
+    b.ChangeDutyCycle(0)
+    p.ChangeFrequency(speed + 5)
+    a.ChangeFrequency(speed + 5)
+def turnRight(angle):
+    duty = float(angle) / 10.0 + 2.5
+    high = int(duty*pwmMax)
+    low= int (pwmMax*(1-duty))
+    pwm.set_pwm(0,high,low)
+def turnLeft(angle):
+    duty = float(angle) / 10.0 + 2.5
+    high = int(1-duty)*pwmMax
+    low= int(pwmMax*duty)
+    pwm.set_pwm(0,high,low)
+def move ():
+    x=x1.get()
+    y=y1.get()
+    z=z1.get()
+    ax=ax2.get()
+    ay=ay2.get()
+    az=az2.get()
+    mx=x-L4*ax
+    my=y-L4*ay
+    mz=z-L4*az
+    if (mx==0 and my==0):
+        q1=0
+    else:
+        q1=math.atan(my/mx)
+    print q1
+    p=math.cos(q1)
+    c=math.sin(q1)
+    r=math.sqrt((mx/p)**2+(mz-L1)**2)
+    if mx==0:
+        FI=math.pi/2
+    else:    
+        FI = math.atan((mz-L1)*p/mx)
+    q2=FI-math.acos(((mx/p)**2+L2**2-L3**2+mz**2+L1**2-2*mz*L1)/(2*L2*r))
+    print q2
+    t=L2*math.cos(q2)
+    j=L2*math.sin(q2)
+    k=math.cos(q1)
+    q3=math.acos((mx/k-t)/L3)-q2
+    q3= math.atan2((mz-L1-j),(mx/p-t))-q2
+    if abs(q3)<0.1:
+        q3=0
+    print q3
+    a=math.cos(q2+q3)
+    b=math.sin(q2+q3)
+    q4=math.atan2(-(ax*b*p - az*a + ay*b*c),(az*b + ax*a*p + ay*a*c))
+    if abs(q4)<0.1:
+        q4=0
+    print q4
+    turnRight(1,q1)
+    turnRight(2,q2)
+    turnRight(3,q3)
+    turnRight(4,q4)
+def exit():
+    GPIO.cleanup()
+    print "quit"
+
+
+ventana = Tk()
+ventana.title("interfaz brazo")
+#definicion de la ventana
+frame = Frame(ventana)
+frame.grid(column=0, row=0, padx=(100,100), pady=(100,100))
+frame.columnconfigure(0,weight=1)
+frame.rowconfigure(0,weight=1)
+#slider
+q1 = Scale(frame, from_=0, to=360, orient=HORIZONTAL)
+q1.grid(column=1, row=20, columnspan=30)
+
+q2 = Scale(frame, from_=-50, to=200, orient=HORIZONTAL)
+q2.grid(column=1, row=30, columnspan=30)
+
+q3 = Scale(frame, from_=-50, to=200, orient=HORIZONTAL)
+q3.grid(column=1, row=40, columnspan=30)
+
+q4 = Scale(frame, from_=-90, to=90, orient=HORIZONTAL)
+q4.grid(column=1, row=50, columnspan=30)
+
+#etiquetas
+q1tx = Label(text="Q1").place(x=130,y=189)
+q2tx = Label(text="Q2").place(x=130,y=230)
+q3tx = Label(text="Q3").place(x=130,y=275)
+q4tx = Label(text="Q4").place(x=130,y=315)
+
+etx = Label(text="X").place(x=120,y=75)
+ety = Label(text="Y").place(x=160,y=75)
+etz = Label(text="Z").place(x=200,y=75)
+etang = Label(text="ax").place(x=250,y=75)
+etang1 = Label(text="ay").place(x=270,y=75)
+etang1 = Label(text="az").place(x=320,y=75)
+#Cuadros para introducir valores 
+posx = ""
+x1 = Entry(frame, width=5, textvariable=posx)
+x1.place(x=10,y=1)
+
+posy = ""
+y1 = Entry(frame, width=5, textvariable=posy)
+y1.place(x=50,y=1)
+
+posz = ""
+z1 = Entry(frame, width=5, textvariable=posz)
+z1.place(x=90,y=1)
+ax1 = ""
+ax2 = Entry(frame, width=5, textvariable=ax1)
+ax2.grid(column=17, row=1, columnspan=5)
+
+
+ay1 = ""
+ay2 = Entry(frame, width=5, textvariable=ay1)
+ay2.grid(column=24, row=1, columnspan=5)
+
+
+az1 = ""
+az2 = Entry(frame, width=5, textvariable=az1)
+az2.grid(column=29, row=1, columnspan=5)
+
+#Botones
+mover = Button(frame,command=move, text="Start", width=5)
+mover.grid(column=5, row=7)
+
+Para = Button(frame, command=stop, text="Stop", width=5)
+Para.grid(column=15, row=7)
+
+ini = Button(frame, text="Home", width=5)
+ini.grid(column=10, row=15)
+
+exit = Button(frame, text="Exit", width=5)
+exit.grid(column=10, row=15)
+
+#botones coche
+
+avanza = Button(frame, command=forward(speed), text="Avanza", width=10)
+avanza.grid(column=300, row=15)
+
+retro = Button(frame, command=backwards(speed), text="Retroceder", width=10)
+retro.grid(column=300, row=30)
+
+giradrcha = Button(frame, command=SpinRight(speed), text="Gira Derecha", width=10)
+giradrcha.grid(column=400, row=20)
+
+giraizda = Button(frame, command=SpinLeft(speed), text="Gira Izquierda", width=10)
+giradrcha.grid(column=200, row=20)
+
+ventana.mainloop()
+
+#ultrasonic sensors functions
+##def getDistanceRight():
+##    GPIO.output (RCT,True) 
+##    time.sleep (0.00001)            
+##    GPIO.output (RCT, False) 
+##    start= time.time()                
+##    while GPIO.input (RCE) == 0: 
+##        start =time.time()             
+##    
+#ultrasonic sensors functions
+##def getDistanceRight():
+##    GPIO.output (RCT,True)
+##    time.sleep (0.00001)
+##    GPIO.output (RCT, False)
+##    start= time.time()
+##    while GPIO.input (RCE) == 0:
+##        start =time.time()
+##    while GPIO.input (RCE) == 1:
+##        stop =time.time()
+##    t_trans= stop-start
+##    distancia = (t_trans*34300)/2
+##    print distancia
+##    time.sleep(1)
+##    return distancia
+##def getDistanceLeft():
+##    GPIO.output (LCT,True) 
+##    time.sleep (0.00001)            
+##    GPIO.output (LCT, False) 
+##    start= time.time()                
+##    while GPIO.input (lCE) == 0: 
+##        start =time.time()             
+##    while GPIO.input (LCE) == 1: 
+##        stop =time.time()              
+##    t_trans= stop-start                
+##    distancia = (t_trans*34300)/2
+##    #print distancia
+##    time.sleep(1)
+##    return distancia
+##def getDistanceSide():
+##    GPIO.output (LST,True) 
+##    time.sleep (0.00001)            
+##    GPIO.output (LST, False) 
+##    start= time.time()                
+##    while GPIO.input (LSE) == 0: 
+##        start =time.time()             
+##    while GPIO.input (LSEE) == 1: 
+##        stop =time.time()              
+##    t_trans= stop-start                
+##    distancia = (t_trans*34300)/2
+##    #print distancia
+##    time.sleep(1)
+##    return distancia
+
+#try:
+##        move(1.299,2.25,0.5,0.433,0.75,-0.5)
+    
+##    while (1):
+        #forward(speed)
+	#turnRight(45)
+##	distancia=getDistanceRight()      
+##        if distancia<30:
+##		if primera==1: 
+##		turnRight(45)
+##		time.sleep(0.1)
+##		turnLeft(0)
+##		primera=0
+##		girado=1
+##	else if distancia>30 && girado=1
+##        	primera=1
+##		girado=0
+
+
+##        DR=servos.getDistanceRight()
+##        DL=servos.getDistanceLeft()
+##        DS=servos.getDistanceSide()
+##        if DR <=10 and DL > 10
+##            obstacleRight= True
+##        if DL<=10 and DR > 10
+##            obstacleleft = True
+##        if DL <=10 and DL<=10
+##            obstacleCentre=True
+##        if obstacleRight
+##            servos.stop()
+##            servos.turnLeft()
+##            #servos.forward()
+##        if obstacleLeft
+##            servos.stop()
+##            servos.turnRight()
+##            #servos.forward()
+##        if obstacleCentre
+##            servos.stop()
+##            servos.turnRight()
+##            #servos.forward()
+        
+##except KeyboardInterrupt:
+       
